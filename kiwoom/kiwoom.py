@@ -1,8 +1,8 @@
-from PyQt5.QAxContainer import *
-from PyQt5.QtCore import *
-from config.errorCode import *
+from PyQt5.QAxContainer import *   # PyQt5.QAxConyainer 불러오는 코드
+from PyQt5.QtCore import *   # PyQt5.QtCore 안에 이벤트 루프를 실행하는 QEventLoop() 함수를 불러오는 라이브러리
+from config.errorCode import *   # config 에러 발생시 나오는 변수 저장소
 
-class Kiwoom(QAxWidget):
+class Kiwoom(QAxWidget):   # 
    def __init__(self):
       super().__init__()
       print("Kiwoom() class start.")
@@ -11,14 +11,24 @@ class Kiwoom(QAxWidget):
       self.login_event_loop = QEventLoop() #로그인을 이벤트 루프 안에서 실행하도록 만들기 위해 선언한 변수
       #########################################
       
-
+      ### 계좌 관련된 변수
+      self.account_num = None # 계좌번호 담아주는 변수
+      self.deposit=0 # 코아스튜디오에서 확인한 앞에 번호 0
+      self.use_money=0 # 실제 투자에 사용할 금액
+      self.use_money_percent = 0.5 # 예수금에서 실제 사용할 비율
+      self.output_deposit=0 # 출력가능 금액
+      ################################################
+      
+      ### 요청 스크린 번호
+      self.screen_my_info="2000" # 계좌 관련된 스크린 번호
+      
       ######### 초기 셋팅 함수들 바로 실행
       self.get_ocx_instance() #Ocx 방식을 파이썬에 사용할 수 있게 변환해 주는 함수 실행
       self.event_slots() #키움과 연결하기 위한 signal / slot 모음 함수 실행
       self.signal_login_commConnect() #로그인 시도 함수 실행
       self.get_account_info() #계좌번호 가져오기
-      
-      #########################################
+      self.detail_account_info() # 예수금 요청 시그널 포함
+      ###############################################
 
    def get_account_info(self):
       account_list = self.dynamicCall("GetLoginInfo(QString)","ACCNO") #계좌번호 변환
@@ -32,6 +42,7 @@ class Kiwoom(QAxWidget):
       
    def event_slots(self):
       self.OnEventConnect.connect(self.login_slot) # 로그인 관련 이벤트
+      self.OnReceiveTrData.connect(self.trdata_slot) #트랜잭션 요청 관련 이벤트
    
       
    def signal_login_commConnect(self):
@@ -44,4 +55,30 @@ class Kiwoom(QAxWidget):
       print(errors(err_code)[1])
       
       # 로그인 처리가 완료되었으면 이벤트 루프를 종료한다
-      self.login_event_loop.exit()      
+      self.login_event_loop.exit()
+      
+   def detail_account_info(self, sPrevNext="0"):
+      self.dynamicCall("SetInputValue(QString, QString)", "계좌번호", self.account_num)
+      self.dynamicCall("SetInputValue(QString, QString)", "비밀번호", "0000")
+      self.dynamicCall("SetInputValue(QString, QString)", "비밀번호입력매체구분", "00")
+      self.dynamicCall("SetInputValue(QString, QString)", "조회구분", "1")
+      self.dynamicCall("CommRqData(QString, QString, int, QString)", "예수금상세현황요청", "opw00001", sPrevNext, self.screen_my_info)
+      
+   def trdata_slot(self, sScrNo, sRQName, sTrCode, sRecordName, sPrevNext):
+      if sRQName == "예수금상세현황요청":
+         deposit =self.dynamicCall("GetCommData(QString, QString, int, QString)", sTrCode, sRQName, 0, "예수금")
+         self.deposit = int(deposit)
+         
+         use_money = float(self.deposit) * self.use_money_percent
+         self.use_money = int(use_money)
+         self.use_money = self.use_money / 4 # 한종목을 매수할 때 돈을 다쓰면 안됨으로 4종목으로 나누어 주는 변수
+         
+         output_deposit =self.dynamicCall("GetCommData(QString, QString, int, QString)", sTrCode, sRQName, 0, "출금가능금액")
+         self.output_deposit = int(output_deposit)
+         
+         print("에수금 : %s" % self.output_deposit)
+         
+         self.stop_screen_cancel(self.screen_my_info)
+         
+   def stop_screen_cancel(self, sScrNo=None):
+      self.dynamicCall("DisconnectRealData(QSrting)", sScrNo) #스크린 번호 연결 끊기
