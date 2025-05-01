@@ -110,11 +110,11 @@ class Kiwoom(QAxWidget):
             for i in range(rows):
                 code = self.dynamicCall("GetCommData(QString, QString, int, QString)", sTrCode, sRQName, i, "종목번호")
                 code = code.strip()[1:]
-                code_nm = self.dynamicCall("GetCommData(QString, QString, int QString)", sTrCod, sRQName, i, "종목명")
+                code_nm = self.dynamicCall("GetCommData(QString, QString, int, QString)", sTrCode, sRQName, i, "종목명")
                 stock_quantity = self.dynamicCall("GetCommData(QString, QString, int, QString)", sTrCode, sRQName, i, "보유수량")
                 buy_price = self.dynamicCall("GetCommData(QSstring, QString, int, QString)", sTrCode, sRQName, i, "매입가")
                 learn_rate = self.dynamicCall("GetCommData(QString, QString, int, QString)", sTrCode, sRQName, i, "수익률(%)")
-                current_price = self.dynamicCall("GetCommData(QString, QString, int QString)", sTrCode, sRQName, i, "현재가")
+                current_price = self.dynamicCall("GetCommData(QString, QString, int, QString)", sTrCode, sRQName, i, "현재가")
                 total_chegual_price = self.dynamicCall("GetCommData(QString, QString, int, QString)", sTrCode, sRQName, i, "매입금액")
                 possible_quantity = self.dynamicCall("GetCommData(QString, QString, int, QString)", sTrCode, sRQName, i, "매매가능수량")
                 
@@ -129,7 +129,7 @@ class Kiwoom(QAxWidget):
                 stock_quantity = int(stock_quantity.strip())
                 buy_price = int(buy_price.strip())
                 learn_rate = float(learn_rate.strip())
-                current_price int(current_price.strip())
+                current_price = int(current_price.strip())
                 total_chegual_price = int(total_chegual_price.strip())
                 possible_quantity = int(possible_quantity.strip())
                 
