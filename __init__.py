@@ -20,3 +20,5 @@ if __name__ == "__main__":
 # git commit -m "수정사항"   # 수정 버젼관리 이름
 # git push   # 최종 업데이트 명령어
 # git pull origin main  # 깃에서 최신버전으로 불러오기 pull
+
+# 가상 계좌번호 : 8103418811
