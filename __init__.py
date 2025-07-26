@@ -16,7 +16,7 @@ if __name__ == "__main__":
    Main()
 
 
-# git add .   # git 에 파일을 추가하겠다
+# git add .   # git 에 파일을 추가하겠다 ( " . " 점 띄어쓰기 꼭해야함)
 # git commit -m "수정사항"   # 수정 버젼관리 이름
 # git push   # 최종 업데이트 명령어
 # git pull origin main  # 깃에서 최신버전으로 불러오기 pull
