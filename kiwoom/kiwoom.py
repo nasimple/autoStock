@@ -15,12 +15,15 @@ class Kiwoom(QAxWidget):
     def __init__(self):
         super().__init__()
         
-        self.realType = RealType() ### 실시간 값을 정의해놓은 클래스
-        self.logging = Logging()
+        ### 실시간 값을 정의해놓은 클래스 불러오기 함수호출
+        self.realType = RealType() 
         
-        # print("Kiwoom() class start.")
         
-        self.logging.logger.debug("Kiwoom() class start.") ### 로그 형태로 변경
+        
+        ### 로그 분석 구문
+        self.logging = Logging()    ### 로그 분석해서 호출 함수
+        self.logging.logger.debug("Kiwoom() class start.") ### 프린트 방식을 로그 출력 형태로 변경
+        # print("Kiwoom() class start.")    ### 이전 키움 로그인 시 정상으로 키움 클래스를 실행하는지 프린트 해주는 구문
         
         ####### event loop를 실행하기 위한 변수모음
         self.login_event_loop = QEventLoop() # 로그인을 이벤트 루프 안에서 실행하도록 만들기 위해 선언한 변수
@@ -35,7 +38,7 @@ class Kiwoom(QAxWidget):
         self.not_account_stock_dict = {}        # 미체결 정보 담는 딕 
                 
         self.account_num = None # 계좌번호 담아주는 변수
-        self.deposit = 0 # 예수금
+        self.deposit = 0 # 예수금 (주식 거래를 위해 계좌에 넣어둔 현금 자산 영어 해석 : 보증금, 착수금)
         self.use_money = 0 # 실제 투자에 사용할 금액
         self.use_money_percent = 0.5 # 예수금에서 실제 사용할 비율
         self.output_deposit = 0 # 출금가능 금액
@@ -88,21 +91,16 @@ class Kiwoom(QAxWidget):
         if self.portfolio_stock_dict:
             
             for code in self.portfolio_stock_dict.keys():
+                print(f"시간 정상 출력 : [{datetime.now().strftime('%H:%M:%S')}] 종목 코드: {code}")
                 
-            
-                # print(f"[{datetime.now().strftime('%H:%M:%S')}] 종목 코드: {code}")
-                출처 = self.portfolio_stock_dict[code].get("출처", "미확인")## 책에 없는 내용
-                print(f"[{datetime.now().strftime('%H:%M:%S')}] 종목 코드: {code} | 출처: {출처}")
-            
                 stock_info = self.portfolio_stock_dict[code]
             
                 if '스크린번호' not in stock_info:
                     print(f"❗경고: {code}에 스크린번호 없음. 건너뜀")
                     continue  # ✅ 이 줄에서 아래 코드를 실행하지 않고 다음 루프로 넘어감
-                
-            screen_num =self.portfolio_stock_dict[code]['스크린번호']       # 포트폴리오에서 받아온 종목 과 스크린 번호를 screen_num 에 넘겨줌
-            fids = self.realType.REALTYPE['주식체결']['체결시간']           # 주식 체결 시간 을 fids에 넘겨줌
-            self.dynamicCall("SetRealReg(QString, QString, QString, QString)", screen_num, code, fids, "1")  #fid는 RealType()클래스 안의 20 반환
+                screen_num =self.portfolio_stock_dict[code]['스크린번호']       # 포트폴리오에서 받아온 종목 과 스크린 번호를 screen_num 에 넘겨줌
+                fids = self.realType.REALTYPE['주식체결']['체결시간']           # 주식 체결 시간 을 fids에 넘겨줌
+                self.dynamicCall("SetRealReg(QString, QString, QString, QString)", screen_num, code, fids, "1")  #fid는 RealType()클래스 안의 20 반환
             
         else:
             print("포트폴리오에 종목이 없습니다.")
@@ -194,10 +192,10 @@ class Kiwoom(QAxWidget):
             self.use_money = self.use_money / 4 # 한 종목 매수 시 돈을 다 쓰지 않게 4종목으로 나눔
             
             output_deposit = self.dynamicCall("GetCommData(QString, QString, int, QString)", sTrCode, sRQName, 0, "출금가능금액")
-            self.output_deposit = int(output_deposit)
+            self.output_deposit = int(output_deposit)                                                                                                                                                               
             
-            print("예수금 : %s" % self.deposit)
-            print("출금가능금액 : %s" % self.output_deposit)
+            ## print("예수금 : %s" % self.deposit)
+            ## print("출금가능금액 : %s" % self.output_deposit)
             
             self.stop_screen_cancel(self.screen_my_info) # 스크린 번호 지우기    
             self.detail_account_info_event_loop.exit() # 이벤트 루프 끊기
@@ -217,20 +215,23 @@ class Kiwoom(QAxWidget):
             print("계좌평가잔고내역요청 내역 : 총 매입 %s, 총평가손익 %s, 총수익률 %s" % (self.total_buy_money, self.total_profit_loss_money, self.total_profit_loss_rate))
             
             rows = self.dynamicCall("GetRepeatCnt(QString, QString)", sTrCode, sRQName)
-            print("계좌평가잔고내역 페이지별 수량 :", rows) 
-            
-            #self.stop_screen_cancel(self.screen_my_info) # 스크린 번호 지우기
-            #self.detail_account_info_event_loop.exit() # 이벤트 루프 끊기
+            print("계좌평가잔고내역 페이지별 수량 :", rows)
             
             
             ### 계좌평가잔고내역중 보유 종목 불러오기 ### 멀티데이터 불러오는 포문 #######################################################################################
-            if rows ==0:### rows 는 계좌평가잔고내역의 수량을 카운팅 해주니 아무것도 없을때는 if 문이돌면서 이벤트 루프를 종료하고 내용이 있으면 else를 돈다
+            
+            #### rows == 계좌평가잔고내역의 수량을 카운팅 해주니 아무것도 없을때는 if 문이돌면서 이벤트 루프를 종료하고 내용이 있으면 else를 돈다
+            if rows == 0:
                 print("보유종목이 없습니다.")
+                print("잔고 이벤트 루프 종료 시작")
                 self.stop_screen_cancel(self.screen_my_info) # 스크린 번호 지우기
                 self.detail_account_info_event_loop.exit()
+                return  # ❗여기서 함수 탈출 (이후 줄 아예 실행 안됨)
             
             else:
                 for i in range(rows):
+                    print(f"[디버그] i={i}, code_raw={self.dynamicCall(..., ..., i, '종목번호')}")
+
                     code = self.dynamicCall("GetCommData(QString, QString, int, QString)", sTrCode, sRQName, i, "종목번호")
                     code = code.strip()[1:] ### 키움에서 받아오는 종목번호의 앞자리를 지운다 ex: "A77777" 이면 A삭제
                     code_nm = self.dynamicCall("GetCommData(QString, QString, int, QString)", sTrCode, sRQName, i, "종목명").strip()
@@ -241,13 +242,24 @@ class Kiwoom(QAxWidget):
                     total_chegual_price = int(self.dynamicCall("GetCommData(QString, QString, int, QString)", sTrCode, sRQName, i, "매입금액").strip())
                     possible_quantity = int(self.dynamicCall("GetCommData(QString, QString, int, QString)", sTrCode, sRQName, i, "매매가능수량").strip())
                     
-                    print("종목번호: %s - 종목명: %s - 보유수량: %s - 매입가: %s - 수익률: %s - 현재가: %s - 매입금액: %s - 매매가능수량: %s" % (code, code_nm, stock_quantity, buy_price, learn_rate, current_price, total_chegual_price, possible_quantity))
+                    ##### 계좌 평가 잔고내역 확인 구문 
+                    print(
+                        f"계좌평가잔고내역:\n"
+                        f"종목번호: {code}\n"
+                        f"종목명: {code_nm}\n"
+                        f"보유수량: {stock_quantity}\n"
+                        f"매입가: {buy_price}\n"
+                        f"수익률: {learn_rate}\n"
+                        f"현재가: {current_price}\n"
+                        f"매입금액: {total_chegual_price}\n"
+                        f"매매가능수량: {possible_quantity}\n"
+                    )
                     
                     if code in self.account_stock_dict:
                         pass
                     else:
                         self.account_stock_dict[code] = {}
-                    
+                                            
                     self.account_stock_dict[code].update({"종목명": code_nm})
                     self.account_stock_dict[code].update({"보유수량": stock_quantity})
                     self.account_stock_dict[code].update({"매입가": buy_price})
@@ -259,8 +271,6 @@ class Kiwoom(QAxWidget):
                     print("sPreNext: %s" % sPrevNext)
                     print("계좌에 가지고 있는 종목은 %s " % rows)
                     
-                
-                
                 if sPrevNext == "2": # sPrevNext 에서 넘어오는 값이 2와같을때는 아래 self.detail_account_myStock(sPrevNext="2") 를 실행한다
                     self.detail_account_myStock(sPrevNext="2") # detail_account_myStock을 sPrevNext="2"로 재호출하여 추가 데이터를 요청한다.
                     
@@ -277,43 +287,44 @@ class Kiwoom(QAxWidget):
             if rows == 0:
                 print("미채결 종목이 없습니다.")
             
-            for i in range(rows):
-                code = self.dynamicCall("GetCommData(QString, QString, int, QString)", sTrCode, sRQName, i, "종목코드").strip()
-                code_nm = self.dynamicCall("GetCommData(QString, QString, int, QString)", sTrCode, sRQName, i, "종목명").strip()
-                order_no = int(self.dynamicCall("GetCommData(QString, QString, int, QString)", sTrCode, sRQName, i, "주문번호").strip()) ### 미체결 되었을때 주문번호의 값을 반환한다
-                order_status = self.dynamicCall("GetCommData(QString, QString, int, QString)", sTrCode, sRQName, i, "주문상태").strip()
-                order_quantity = int(self.dynamicCall("GetCommData(QString, QString, int, QString)", sTrCode, sRQName, i, "주문수량").strip())
-                order_price = int(self.dynamicCall("GetCommData(QString, QString, int, QString)", sTrCode, sRQName, i, "주문가격").strip())
-                order_gubun = self.dynamicCall("GetCommData(QString, QString, int, QString)", sTrCode, sRQName, i, "주문구분").strip().lstrip('+').lstrip('-')
-                not_quantity = int(self.dynamicCall("GetCommData(QString, QString, int, QString)", sTrCode, sRQName, i, "미체결수량").strip())
-                ok_quantity = int(self.dynamicCall("GetCommData(QString, QString, int, QString)", sTrCode, sRQName, i, "체결량").strip())
-                
-                
-                
-                if order_no in self.not_account_stock_dict:
-                    pass
-                else:
-                    self.not_account_stock_dict[order_no] = {}
-                    self.not_account_stock_dict[order_no].update({'종목코드': code})
-                    self.not_account_stock_dict[order_no].update({'종목명': code_nm})
-                    self.not_account_stock_dict[order_no].update({'주문번호': order_no})
-                    self.not_account_stock_dict[order_no].update({'주문상태': order_status})
-                    self.not_account_stock_dict[order_no].update({'주문수량': order_quantity})
-                    self.not_account_stock_dict[order_no].update({'주문가격': order_price})
-                    self.not_account_stock_dict[order_no].update({'주문구분': order_gubun})
-                    self.not_account_stock_dict[order_no].update({'미체결수량': not_quantity})
-                    self.not_account_stock_dict[order_no].update({'체결량': ok_quantity})
+            else:
+                for i in range(rows):
+                    code = self.dynamicCall("GetCommData(QString, QString, int, QString)", sTrCode, sRQName, i, "종목코드").strip()
+                    code_nm = self.dynamicCall("GetCommData(QString, QString, int, QString)", sTrCode, sRQName, i, "종목명").strip()
+                    order_no = int(self.dynamicCall("GetCommData(QString, QString, int, QString)", sTrCode, sRQName, i, "주문번호").strip()) ### 미체결 되었을때 주문번호의 값을 반환한다
+                    order_status = self.dynamicCall("GetCommData(QString, QString, int, QString)", sTrCode, sRQName, i, "주문상태").strip()
+                    order_quantity = int(self.dynamicCall("GetCommData(QString, QString, int, QString)", sTrCode, sRQName, i, "주문수량").strip())
+                    order_price = int(self.dynamicCall("GetCommData(QString, QString, int, QString)", sTrCode, sRQName, i, "주문가격").strip())
+                    order_gubun = self.dynamicCall("GetCommData(QString, QString, int, QString)", sTrCode, sRQName, i, "주문구분").strip().lstrip('+').lstrip('-')
+                    not_quantity = int(self.dynamicCall("GetCommData(QString, QString, int, QString)", sTrCode, sRQName, i, "미체결수량").strip())
+                    ok_quantity = int(self.dynamicCall("GetCommData(QString, QString, int, QString)", sTrCode, sRQName, i, "체결량").strip())
                     
-                    print("미체결종목 : %s" % self.not_account_stock_dict[order_no])
-                    
-                    
+                    if order_no in self.not_account_stock_dict:
+                        pass
+                    else:
+                        self.not_account_stock_dict[order_no] = {
+                            '종목코드': code,
+                            '종목명': code_nm,
+                            '주문번호': order_no,
+                            '주문상태': order_status,
+                            '주문상태': order_status,
+                            '주문수량': order_quantity,
+                            '주문가격': order_price,
+                            '주문구분': order_gubun,
+                            '미체결수량': not_quantity,
+                            '체결량': ok_quantity,
+                        }
+                        
+                        print("미체결종목 자꾸나와!!! : %s" % self.not_account_stock_dict[order_no])
+
             if sPrevNext == "2":
                 print("👉 미체결 다음 페이지 요청")
                 QTimer.singleShot(300, lambda: self.not_concluded_account(sPrevNext="2"))
             else:
                 self.stop_screen_cancel(self.screen_my_info)
                 self.detail_account_info_event_loop.exit()
-                print("미체결 이벤트루프 끝")
+                print(f"이벤트루프 False면 잘 끊김 → {self.detail_account_info_event_loop.isRunning()}")
+                
         ### 미체결요청 값 받기 END  #######################################################################################
         
         ### 주식 일봉차트 조회값 받기 #######################################################################################
@@ -864,8 +875,17 @@ class Kiwoom(QAxWidget):
         
         
     def msg_slot(self, sScrNo, sRQName, sTrCode, msg):
-        print("스크린: %s, 요청이름: %s, tr코드: %s --- %s"  %(sScrNo, sRQName, sTrCode, msg))
+        #print("스크린: %s, 요청이름: %s, tr코드: %s --- %s"  %(sScrNo, sRQName, sTrCode, msg))
+        print(f"[msg_slot] 스크린(sScrNo): {sScrNo}, 종목이름(sRQName): {sRQName}, 종목번호(sTrCode): {sTrCode}, msg: {msg}")
 
     def file_delets(self):
         if os.path.isfile("files/condition_stock.txt"):
             os.remove("files/condition_stock.txt")
+            
+### 시나리오별 시간당 매매 수익율 분석 정의
+def get_strategy_time_ranges():
+    return {
+        "strategy_open": ("090000", "100000"),
+        "strategy_midopen": ("093000", "100000"),
+        "strategy_all": ("090000", "153000"),
+    }
